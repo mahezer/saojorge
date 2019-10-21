@@ -1,0 +1,109 @@
+#!/bin/bash
+
+if ! hash git 2>/dev/null; then
+  echo "
+Você precisa instalar o git na sua máquina!"
+  exit 1
+fi
+
+read -p "
+Qual é o caminho da sua aplicação ? " folderPath
+
+cd $folderPath
+
+if [ ! -d ".git" ]; then
+  echo "
+Este diretório não é um repositório git";
+  exit 1
+fi 
+
+branch=""
+
+hasBranchError=true
+while $hasBranchError; do
+  echo "
+Estes são os branches disponíveis para fazer o commit
+"
+
+  git branch | less -REX
+
+  read -p "
+Em qual deles você quer fazer a alteração ? " branch
+
+  if git checkout $branch; then
+    hasBranchError=false
+  else
+    clear
+    echo "Ops! Aparentemente este branch não existe!"
+  fi
+done
+
+git checkout $branch
+
+git pull origin $branch
+
+answer=1
+while [ $answer != 0 ]; do
+  clear
+  
+  echo "
+Esta é a situação do seu repositório."
+  echo "
+Arquivos em verde já estarão adicionados no seu próximo commit"
+  echo "
+Arquivos em vermelho são arquivos que ainda não foram adicionados. 
+   
+  "
+  git -c color.status=always status
+
+  read -p "
+  O que deseja fazer ? 
+  
+(1) Adicionar um novo arquivo
+(2) Remover um arquivo adicionado
+(0) Finalizar
+
+Sua resposta: " answer
+
+  case "$answer" in
+    "1")
+      read -p "
+  Digite o caminho do arquivo que você quer adicionar: " filePath
+      git add $filePath
+      ;;
+    "2")
+      read -p "
+  Digite o caminho do arquivo que você quer remover: " filePath
+      git reset $filePath
+      ;;
+    "*")
+      ;;
+  esac
+done
+
+read -p "
+O que você fez nesta alteração ?
+
+Comece com verbos no infinitivo, por exemplo: Criar, adicionar, fazer...
+
+Sua resposta: " commitMessage
+
+git commit -m "$commitMessage"
+
+git push origin $branch
+
+echo "
+Estas são as suas tags atuais
+------------------------------------
+"
+
+git tag | less -REX
+
+read -p "
+-----------------------------------
+Qual é o nome da tag que você deseja criar ? 
+" tagNumber
+
+git tag $tagNumber
+
+git push --tags
